@@ -1,9 +1,56 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:weather_app/secrets.dart';
+import 'dart:developer';
+import 'dart:convert';
 
-class WeatherScreen extends StatelessWidget {
+class WeatherScreen extends StatefulWidget {
   const WeatherScreen({super.key});
+
+  @override
+  State<WeatherScreen> createState() => _WeatherScreenState();
+}
+
+class _WeatherScreenState extends State<WeatherScreen> {
+  double temperature = 0.0;
+  bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    getCurrentWeather();
+  }
+
+  Future getCurrentWeather() async {
+    String cityName = 'Chennai';
+
+    try {
+      setState(() {
+        isLoading = true;
+      });
+
+      final result = await http.get(
+        Uri.parse(
+          'https://api.openweathermap.org/data/2.5/forecast?q=$cityName&APPID=$openWeatherApiKey',
+        ),
+      );
+
+      final data = jsonDecode(result.body);
+
+      if (data['cod'] != '200') {
+        throw 'An unexpected error occurred';
+      }
+      setState(() {
+        // Update your state with the fetched weather data
+        temperature = data['list'][0]['main']['temp'];
+        isLoading = false;
+      });
+    } catch (e) {
+      throw Exception(e);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -16,112 +63,114 @@ class WeatherScreen extends StatelessWidget {
         centerTitle: true,
         actions: [IconButton(icon: Icon(Icons.refresh), onPressed: () {})],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Main card displaying weather information
-            SizedBox(
-              width: double.infinity,
-              child: Card(
-                elevation: 10,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.all(Radius.circular(24)),
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.all(Radius.circular(24)),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Padding(
-                      padding: EdgeInsets.all(15.0),
-                      child: Column(
-                        children: [
-                          Text(
-                            "300 ° K",
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
+      body: isLoading
+          ? CircularProgressIndicator()
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Main card displaying weather information
+                  SizedBox(
+                    width: double.infinity,
+                    child: Card(
+                      elevation: 10,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(24)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.all(Radius.circular(24)),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Padding(
+                            padding: EdgeInsets.all(15.0),
+                            child: Column(
+                              children: [
+                                Text(
+                                  "$temperature K",
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                SizedBox(height: 10),
+
+                                Icon(Icons.cloud, size: 56),
+
+                                SizedBox(height: 20),
+
+                                Text(
+                                  "Rain",
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.normal,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-
-                          SizedBox(height: 10),
-
-                          Icon(Icons.cloud, size: 56),
-
-                          SizedBox(height: 20),
-
-                          Text(
-                            "Rain",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.normal,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-            // Weather forecast list
-            const Text(
-              "Weather Forecast",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.start,
-            ),
+                  // Weather forecast list
+                  const Text(
+                    "Weather Forecast",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.start,
+                  ),
 
-            const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  WeatherForeCastCard(),
-                  WeatherForeCastCard(),
-                  WeatherForeCastCard(),
-                  WeatherForeCastCard(),
-                  WeatherForeCastCard(),
-                  WeatherForeCastCard(),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        WeatherForeCastCard(),
+                        WeatherForeCastCard(),
+                        WeatherForeCastCard(),
+                        WeatherForeCastCard(),
+                        WeatherForeCastCard(),
+                        WeatherForeCastCard(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Additional information section
+                  const Text(
+                    "Additional Information",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                    textAlign: TextAlign.start,
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: const [
+                      AdditionalInformationCard(
+                        icon: Icons.water_drop,
+                        label: "Humidity",
+                        value: "78%",
+                      ),
+                      AdditionalInformationCard(
+                        icon: Icons.air,
+                        label: "Wind Speed",
+                        value: "15 km/h",
+                      ),
+                      AdditionalInformationCard(
+                        icon: Icons.thermostat,
+                        label: "Pressure",
+                        value: "1013 hPa",
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-            // Additional information section
-            const Text(
-              "Additional Information",
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.start,
-            ),
-
-            const SizedBox(height: 10),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
-                AdditionalInformationCard(
-                  icon: Icons.water_drop,
-                  label: "Humidity",
-                  value: "78%",
-                ),
-                AdditionalInformationCard(
-                  icon: Icons.air,
-                  label: "Wind Speed",
-                  value: "15 km/h",
-                ),
-                AdditionalInformationCard(
-                  icon: Icons.thermostat,
-                  label: "Pressure",
-                  value: "1013 hPa",
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
